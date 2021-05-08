@@ -1,0 +1,76 @@
+#include <ESP8266WiFi.h>
+#include <CTBot.h>
+
+CTBot myBot;
+#define photodioda1 A0
+#define led1 D1
+#define photodioda2 D0
+int nilai1 = 0;
+int nilai2;
+int count;
+//token tele 1668266238:AAEkCaNU9pI2-ooT7--LB5RCx1TExI0HXsY
+
+String ssid = "KOS_32"; //nama wifi, silahkan diganti
+String pass = "karisidenan99"; //pass wifi, silahkan diganti
+String token = "1668266238:AAEkCaNU9pI2-ooT7--LB5RCx1TExI0HXsY"; //token telegram untuk bot
+const int id_tele = 1729916605; //id telegram, silahkan diganti bagian ini
+unsigned long sebelumnya;
+unsigned long waktu;
+
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200);
+  // connect esp826 ke wifi
+  //mybot.wifiConnect(ssid,pass);
+
+    // check if all things are ok
+  WiFi.begin(ssid, pass);
+  Serial.print("connecting");
+  while (WiFi.status() != WL_CONNECTED) {
+    Serial.print(".");
+    delay(500);
+  }
+  Serial.println();
+  Serial.print("connected:");
+  Serial.println(WiFi.localIP());
+  myBot.setTelegramToken(token);
+  pinMode(photodioda1, INPUT);
+  pinMode(photodioda2, INPUT);
+  pinMode(led1,OUTPUT);
+  
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  unsigned long sekarang = millis();
+  digitalWrite(led1, HIGH);
+  nilai1 = analogRead(photodioda1);
+  nilai2 = digitalRead(photodioda2);
+//    Serial.println(nilai1);
+// nodemcu akan melakukan cek setiap 7 ms apakah ada tetesan infus atau tidak. Jika terdapat tetesan infus maka count akan bertambah
+  if(sekarang - waktu >= 7){
+      waktu = sekarang;
+      //Serial.println(waktu);
+      if(nilai2 == 0){
+        count += 1;
+        //Serial.println(nilai1);
+        }
+      }
+//setiap 20 detik, nodemcu akan mengirim notifikasi ke telegram      
+  if(sekarang - sebelumnya >= 20000){
+    sebelumnya = sekarang;
+    if(nilai1 <= 150){
+      myBot.sendMessage(id_tele, "Infus Habis suster"); //bagian kata2 bisa diganti
+      count = 0;
+      }
+      else if(nilai1 > 200){
+         myBot.sendMessage(id_tele, "Infus masih ada suster"); //bagian kata2 bisa diganti
+               if(count < 20){
+                  myBot.sendMessage(id_tele, "Laju infus terlalu lambat suster, nilai TPM : " + String(count*3));}
+                  else if(count > 28){
+                      myBot.sendMessage(id_tele, "Laju infus terlalu cepat suster, nilai TPM : " +String(count*3));}
+         count = 0;
+          }
+   }
+}
