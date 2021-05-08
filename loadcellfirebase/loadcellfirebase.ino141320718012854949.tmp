@@ -1,0 +1,49 @@
+#include <ESP8266WiFi.h>
+#include<FirebaseArduino.h>
+#include "HX711.h"
+
+#define FIREBASE_HOST "dbskripsiku.firebaseio.com" 
+#define FIREBASE_AUTH "fBW5mxyfwrUNrgTjL4Yxy0W5pQVtZTiO6gAX2yeH" 
+#define WIFI_SSID "projectkita"                                         
+#define WIFI_PASSWORD "Qwejklasd1"                                  
+#define dout D5
+#define sck D6
+ 
+HX711 scale;
+float weight;
+float calibration_factor = 210; // for me this vlaue works just perfect 419640
+
+void setup() 
+{
+  Serial.begin(115200);      // Set the baud rate 115200 in Serial Monitor to display debug messages
+  scale.begin(dout,sck);
+  scale.set_scale();
+  scale.tare(); //Reset the scale to 0
+  long zero_factor = scale.read_average(); //Get a baseline reading
+  
+  WiFi.begin(WIFI_SSID,WIFI_PASSWORD);
+  Serial.print("connecting");
+  while (WiFi.status()!=WL_CONNECTED){
+    Serial.print(".");
+    delay(500);
+  }
+  Serial.println();
+  Serial.print("connected:");
+  Serial.println(WiFi.localIP());
+
+  Firebase.begin(FIREBASE_HOST,FIREBASE_AUTH);
+  Firebase.setString("tabung/Aktif","1");
+}
+
+void loop(){
+  
+  if (Firebase.failed()){
+      Serial.print("Firebase Error");
+      Serial.println(Firebase.error());
+      setup();
+      }
+      
+  scale.set_scale(calibration_factor); //Adjust to this calibration factor
+  weight = scale.get_units(4); 
+  Firebase.setString("tabung/Aktif", String(weight));       
+}
